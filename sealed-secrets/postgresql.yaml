@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: time-tracker-postgresql
+  namespace: time-tracker
+spec:
+  encryptedData:
+    password: AgCsF5GZpUZBIA2PpChTHfl23f7/1pUc7CFV1icZB4zZU7EHGqwpGeV6pt+JQowspWLAzl1Qj04eCpXsff47e7ZmfnUjqmlRQl4GSYPQCXrb+sVZOiZvDNLLntomxLgoFTAnRrCl9/muDCHSbkpXG1jGpbqdfSeRjSdIGDq8tvuLfnl5TvCRNbQo2S1NKcHBrgEb9ArBkMPmW1rU1iDQwIf236SgTIocRti+lEICgy+4Anw2w7mV61fSOyI4uBBO7yq0Dxnv768sS69/k0DwcNpmW1ZBbsiCFKemPTC9+CZglnFgvxHdmncy8oezPDf76BBr+nldDpbURqK/N6ePHvyQveCxYPRlO40/bMWmVRPc1lBc6bXGW5q2PQQeO4VopM/yayHOuI11jaEVrO7Xn1c2URzRHO8CF4W+7voVsk99v0zTkINzeMbtRfuFrWi+N++p66tXTgAVy7XQKm+g/cvhNpihDn79bnZ0kNYKSnlKJWIVDjJeaTpyVo3XxP4DqJrtpxP3rDL7t4vzRX7pXIsLVaw/0L5oFmRPK+KNVwPK48zX59tsWVdoiS0Glaf0OGjATRCODvEl4Fh3sFDv5f/WrTrAn1qFkRBmCn7DGS7OTQJc4hT02/mbegd7bUV6UB1Pcwy7fuSjKYYe0HtFTxAKyJXR2z+wvFazlwoXMlZ3c5fXr19cq5mGRSsyzSOYAKanm8uddSAWLouPCc7tgRr6nGXbnsOzRD0=
+  template:
+    metadata:
+      name: time-tracker-postgresql
+      namespace: time-tracker

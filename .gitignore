@@ -1,0 +1,5 @@
+# 平文の Secret はコミットしない(sealed-secrets/ 配下の暗号化済みのみコミットする)
+/secrets/*.yaml
+!/secrets/.gitkeep
+
+.DS_Store

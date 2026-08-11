@@ -1,0 +1,61 @@
+{{- if .Values.ingress.enabled }}
+{{- $name := include "time-tracker.name" . }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "time-tracker.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls.enabled }}
+  # secretName を指定しない = Traefik の既定証明書(*.kubo.hexabase.io の
+  # ワイルドカード)が使われる。cert-manager は不要
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          # **/api を先に置く**。パスは長い方が優先されるとは限らないため、
+          # 明示的により具体的なパスを先に列挙する。
+          #
+          # ローカル開発では vite の dev proxy が `/api` をバックエンドへ
+          # 転送している(frontend/vite.config.ts)。本番ではこの Ingress が
+          # 同じ役割を担う。
+          #
+          # **同一オリジンであることが必須**。フロントエンドは
+          # `BASE_URL = window.location.origin` で API を呼び(api/client.ts)、
+          # リフレッシュトークンは `SameSite=Strict; Path=/api/auth` の Cookie で
+          # 運ばれる。別オリジンに分けると CORS と Cookie の両方が壊れ、
+          # 認証が成立しなくなる
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}-{{ .Values.backend.name }}
+                port:
+                  number: {{ .Values.backend.port }}
+          # OpenAPI スキーマ配信(task 4.1)。/api 配下ではないため個別に振る
+          - path: /api-docs
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}-{{ .Values.backend.name }}
+                port:
+                  number: {{ .Values.backend.port }}
+          # 残り全部は SPA へ。nginx 側で未知のパスを index.html へ
+          # フォールバックさせる(クライアントルーティングのため)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}-{{ .Values.frontend.name }}
+                port:
+                  number: {{ .Values.frontend.port }}
+{{- end }}

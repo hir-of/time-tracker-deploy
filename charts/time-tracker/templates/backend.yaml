@@ -1,0 +1,134 @@
+{{- $name := include "time-tracker.name" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-{{ .Values.backend.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "time-tracker.labels" . | nindent 4 }}
+spec:
+  ports:
+    - port: {{ .Values.backend.port }}
+      targetPort: http
+      name: http
+  selector:
+    {{- include "time-tracker.selectorLabels" (dict "root" . "component" .Values.backend.name) | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}-{{ .Values.backend.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "time-tracker.labels" . | nindent 4 }}
+spec:
+  # **1 に固定すること**。起動時にマイグレーションと初期管理者ブートストラップを
+  # 実行する(backend/src/main.rs)ため、複数レプリカだと同時実行になる。
+  # スケールさせる場合はマイグレーションを Job へ分離してから
+  replicas: {{ .Values.backend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "time-tracker.selectorLabels" (dict "root" . "component" .Values.backend.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "time-tracker.labels" . | nindent 8 }}
+        {{- include "time-tracker.selectorLabels" (dict "root" . "component" .Values.backend.name) | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret }}
+      {{- if .Values.postgresql.enabled }}
+      # **DB の起動待ち**。backend は起動直後に「マイグレーション適用 →
+      # 初期管理者ブートストラップ → listen」を行う(backend/src/main.rs)ため、
+      # PostgreSQL がまだ初期化中だと接続に失敗して exit 1 する。放置しても
+      # CrashLoopBackOff のリトライでいずれ復帰するが、デプロイのたびに
+      # RESTARTS が積み上がり、ArgoCD が Degraded と判定することもある。
+      #
+      # DB の起動順序は **デプロイ環境の都合** でありアプリの責務ではないので、
+      # アプリ側のリトライではなく initContainer で解決する
+      # (ローカルの compose では depends_on: service_healthy が同じ役割)。
+      #
+      # イメージは PostgreSQL 本体と同じものを使う。すでにノードにキャッシュ
+      # されており追加 pull が要らないうえ、`pg_isready` が同梱されている。
+      # **`nc -z` によるポート疎通では不十分**: 公式イメージは初期化中は Unix
+      # ソケットのみで待ち受け、初期化が完了してから TCP を開く。つまり TCP への
+      # pg_isready の成功が「本当に使える状態」の信号になる
+      initContainers:
+        - name: wait-for-postgresql
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h {{ $name }}-{{ .Values.postgresql.name }} -p {{ .Values.postgresql.port }} -U {{ .Values.postgresql.user }} -t 3; do
+                echo "PostgreSQL の起動を待機中..."
+                sleep 2
+              done
+              echo "PostgreSQL が接続を受け付けました"
+          # namespace に LimitRange があるため requests/limits の指定は必須
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      {{- end }}
+      containers:
+        - name: backend
+          image: {{ include "time-tracker.image" (dict "root" . "repository" .Values.backend.repository "tag" .Values.backend.tag) | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.port }}
+          env:
+            - name: PORT
+              value: {{ .Values.backend.port | quote }}
+            - name: RUST_LOG
+              value: {{ .Values.backend.env.RUST_LOG | quote }}
+            # DATABASE_URL に埋め込むため先に定義する(env は宣言順に $() が解決される)
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.existingSecret }}
+                  key: password
+            - name: DATABASE_URL
+              value: {{ include "time-tracker.databaseUrl" . | quote }}
+            # 32 byte 未満だと起動拒否される(design.md Config)
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backendSecret }}
+                  key: jwt-secret
+            # 初期管理者。users が空のときだけ使われる(要件 2.11/2.12)
+            - name: ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backendSecret }}
+                  key: admin-username
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backendSecret }}
+                  key: admin-password
+            - name: ADMIN_DISPLAY_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backendSecret }}
+                  key: admin-display-name
+          # 認証不要で 200 を返すスキーマ配信を生存確認に使う(task 4.1)
+          readinessProbe:
+            httpGet:
+              path: /api-docs/openapi.json
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api-docs/openapi.json
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}

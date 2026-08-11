@@ -1,0 +1,90 @@
+# time-tracker の共通値。環境固有の値は values-<env>.yaml で上書きする。
+#
+# **イメージタグについて**: `tag` は CI が書き換える。アプリ側リポジトリ
+# (hir-of/time-tracker) がイメージを build/push した後、このリポジトリの
+# values-<env>.yaml の tag を更新する PR を自動作成する。
+# ここ(values.yaml)の tag は既定値であり、実際に使われるのは環境別ファイルの値。
+
+global:
+  namespace: time-tracker
+  createNamespace: true
+
+image:
+  registry: harbor.hexabase.io
+  project: c-furukawa-test
+  # private レジストリのため必須。SealedSecret から生成される Secret を参照する
+  pullSecret: harbor-pull
+  pullPolicy: IfNotPresent
+
+backend:
+  name: backend
+  repository: time-tracker-backend
+  tag: "latest"
+  replicas: 1
+  port: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  # 起動時にマイグレーションと初期管理者ブートストラップを実行する
+  # (backend/src/main.rs)。replicas: 1 のため同時実行は起きない。
+  # 複数レプリカにする場合は Job への分離を検討すること
+  env:
+    RUST_LOG: "info,sqlx::query=warn"
+
+frontend:
+  name: frontend
+  repository: time-tracker-frontend
+  tag: "latest"
+  replicas: 1
+  port: 80
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+postgresql:
+  enabled: true
+  name: postgresql
+  image:
+    repository: postgres
+    tag: "17"
+  port: 5432
+  database: timetracker
+  user: timetracker
+  # パスワードは SealedSecret 経由。この値は参照する Secret の名前
+  existingSecret: time-tracker-postgresql
+  persistence:
+    enabled: true
+    storageClass: longhorn
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# バックエンドが読む秘密情報(JWT_SECRET / ADMIN_*)を保持する Secret 名。
+# SealedSecret から生成される
+backendSecret: time-tracker-backend
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+  # ホスト名は環境別ファイルで指定する
+  host: ""
+  # secretName を指定しない = Traefik の既定証明書(*.kubo.hexabase.io の
+  # ワイルドカード)を使う。cert-manager は不要
+  tls:
+    enabled: true

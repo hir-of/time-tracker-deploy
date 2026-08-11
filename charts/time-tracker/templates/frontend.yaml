@@ -1,0 +1,53 @@
+{{- $name := include "time-tracker.name" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-{{ .Values.frontend.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "time-tracker.labels" . | nindent 4 }}
+spec:
+  ports:
+    - port: {{ .Values.frontend.port }}
+      targetPort: http
+      name: http
+  selector:
+    {{- include "time-tracker.selectorLabels" (dict "root" . "component" .Values.frontend.name) | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}-{{ .Values.frontend.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "time-tracker.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "time-tracker.selectorLabels" (dict "root" . "component" .Values.frontend.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "time-tracker.labels" . | nindent 8 }}
+        {{- include "time-tracker.selectorLabels" (dict "root" . "component" .Values.frontend.name) | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret }}
+      containers:
+        - name: frontend
+          # vite build の成果物を nginx で配信するイメージ。
+          # SPA のため未知のパスは index.html へフォールバックさせる(イメージ側の設定)
+          image: {{ include "time-tracker.image" (dict "root" . "repository" .Values.frontend.repository "tag" .Values.frontend.tag) | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.frontend.port }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}

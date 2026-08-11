@@ -1,0 +1,23 @@
+# baas-test クラスタ(https://7ffc7a95.kubo-test.hexabase.io:6443)向けの値。
+#
+# **tag は CI が書き換える**。アプリ側リポジトリ(hir-of/time-tracker)が
+# イメージを build/push した後、このファイルの tag を更新する PR を自動作成する。
+# 手で編集した場合は CI と衝突しうるので注意すること。
+
+global:
+  namespace: time-tracker
+
+backend:
+  tag: "latest"
+
+frontend:
+  tag: "latest"
+
+ingress:
+  # Traefik の既定証明書(*.kubo.hexabase.io)に乗るホスト名にすること。
+  # 別ドメインにすると証明書が一致せず TLS が成立しない。
+  #
+  # `test-` 接頭辞は baas-test クラスタ(検証環境)であることを示す。
+  # このホスト名は組織の入口 nginx(202.208.80.148)にも登録が必要で、
+  # 未登録だと nginx が 502 を返す(Ingress 側は正常でも外部からは見えない)
+  host: test-time-tracker.kubo.hexabase.io

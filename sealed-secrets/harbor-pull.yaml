@@ -1,0 +1,14 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: harbor-pull
+  namespace: time-tracker
+spec:
+  encryptedData:
+    .dockerconfigjson: AgBVASP3ENTUKp4B/+Y45FfEW/E2tqVJ7/s0wPPmA+eYe4aKrspQ5ivdbZa2yk8KoiFFWZPzhf2LYinPW4sbwYnbjK4D00N56cvTyMNO47bCargRGodJj/slQpHOB1dBu2Uji5SGs5WQ4IQrAYsaLZJVsfOC+8Qnbb2WpqssaWHBx7SDHxdsQ/PWdHUhICZxcG5HH17hQRubxkW9oNZzjeM4kouD5X5YjUN5waHMARa72ITATgITwtqrw1dk43LX6o3GoNAiUiOsbAnJvYPIPEZlnAjNX+YH+ozyeJLmMTq2mi2PcJYW10hrMHE9IUyABNx2XpCgrg8wPnmSJ5Bv+nw+N2rXlS2Lpgr9LTk3fSWrLsDFa2fXLYNZCptp4MYnf/YqPgNss8c0Ydm8cWHyLyQkHOxUZzfeMllWQtH7KORSS/m3veUjl3sVyAEnZYnXpT5bx26Y9QA2U9s7EnHHPWMzExk4J5OEpOSIroJJ2qz4qIsecwelfvq2vV/QK1s/3rcyxvNTOSeL42wyDmbrupkuJL5ztC/XC6DdjSwKfk7ze/gWDZvmuIbY3kA7mMCICuj/vpGzLvBDWcWZ+GZmtT/oyiFQMRLTlNVomh5Wfv8oPXUyvgE60tU9Qweagg9uYyLis/D3beS9Ewo4wbxKDW0rAeQ9ewrGKAG+kGdUHaEMsaxbJNUCS4yz7Myjf1t3etKIIX6ycvmRFaLuprpFCNfxIL5lqEY7gIuSY1R+SSUTx5duCyy1zx+Jdjlq+Gm6OE23aRHcwVSvpd/CR2qRU4yECkFaknp2kIyisUd0LwOtQdDP6XW7fPjXttt1ME9g2hQWVu+yaW9myB8OmeCUIOczlr1zj8WpLoYrya2WidNazAnw55wZ/L2MzkKXlU0YTJrsx1IxjejglFiUoahuuhSJEfIzjPI5dHRr5Hoj8gAXMis1eZjRE5E1NVhpmwntcDDSSRh7cnCZNmpwT4AibGy8YsK4fVgcMJH+xW7fmD1V
+  template:
+    metadata:
+      name: harbor-pull
+      namespace: time-tracker
+    type: kubernetes.io/dockerconfigjson

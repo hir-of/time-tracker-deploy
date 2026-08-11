@@ -1,0 +1,8 @@
+apiVersion: v2
+name: time-tracker
+description: 工数管理システム time-tracker のデプロイ用チャート
+type: application
+# チャート自体のバージョン。テンプレートや構成を変えたら上げる
+version: 0.1.0
+# デプロイ対象アプリのバージョン。イメージタグは values の image.tag が正
+appVersion: "0.1.0"
