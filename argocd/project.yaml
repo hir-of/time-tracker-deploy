@@ -1,0 +1,40 @@
+# c-furukawa-test の AppProject。
+#
+# **命名**: コンテナレジストリ(Harbor)のプロジェクト名 `c-furukawa-test` と揃えている。
+# レジストリと ArgoCD で同じ名前を辿れるようにするため。個人の検証用という
+# 位置づけなので、アプリ名(time-tracker)ではなく所有者を名前にしている。
+#
+# **なぜ default プロジェクトを使わないのか**
+# default は `*` で全リポジトリ・全クラスタを許可する。組織の既存プロジェクト
+# (captain / itc / internal-platform)はいずれもソースと宛先を明示的に絞っており、
+# 誤って別クラスタへ同期する事故を構造的に防いでいる。それに倣う。
+#
+# **なぜ既存プロジェクトに相乗りできないのか**
+# 既存はすべてソースを GitLab に限定している(例: internal-platform は
+# `git@gitlab.hexabase.io:internal-platform/*`)。このリポジトリは GitHub にあるため
+# どのプロジェクトの sourceRepos にも一致しない。
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: c-furukawa-test
+  namespace: argocd
+spec:
+  description: c.furukawa の検証用(time-tracker ほか)
+
+  # このリポジトリのみ許可する
+  sourceRepos:
+    - https://github.com/hir-of/time-tracker-deploy.git
+
+  # baas-test の time-tracker namespace のみ許可する。
+  # server は `argocd cluster list` の SERVER 列と完全一致させること
+  destinations:
+    - server: https://7ffc7a95.kubo-test.hexabase.io:6443
+      namespace: time-tracker
+
+  # クラスタスコープのリソースは作らせない。
+  # namespace は kubectl で作成済みで、チャート側も createNamespace: false にしている
+  clusterResourceWhitelist: []
+
+  # namespace スコープは既定(全許可)。このチャートが作るのは
+  # Deployment / StatefulSet / Service / Ingress / PVC のみ
+  namespaceResourceBlacklist: []
