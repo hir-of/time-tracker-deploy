@@ -173,8 +173,33 @@ PY
 
 ### ArgoCD（正）
 
-ArgoCD がこのリポジトリを監視し、`values-baas-test.yaml` の変更を自動で同期する。
-イメージタグはアプリ側 CI が更新 PR を出す。
+ArgoCD がこのリポジトリを監視する。イメージタグはアプリ側 CI が更新 PR を出す。
+
+**同期は手動**（`syncPolicy.automated` を設定していない）。`main` が動くと ArgoCD は
+`OutOfSync` を表示するが、**適用は自分で指示する**。
+
+```bash
+argocd app get  argocd/time-tracker            # 差分の確認(どのリソースが OutOfSync か)
+argocd app sync argocd/time-tracker            # 適用
+argocd app sync argocd/time-tracker-secrets    # SealedSecret 側
+```
+
+検証環境をデモに使う都合上、**反映のタイミングを人が決められる**ほうが都合がよいため
+（説明の途中で Pod が入れ替わらない）。自動同期にする手順は
+`argocd/application.yaml` のコメントを参照。
+
+> ArgoCD がリポジトリを見に行く間隔は **120 秒**（`argocd-cm` の `timeout.reconciliation`）。
+> マージ直後に `OutOfSync` にならなくても異常ではない。急ぐなら
+> `argocd app get --refresh argocd/time-tracker` で即時に確認できる。
+
+**同期しないときはまず Git を疑う。** クラスタではなく `main` の実体を見ること。
+
+```bash
+gh api repos/hir-of/time-tracker-deploy/commits/main --jq .sha
+```
+
+`Sync Status: Synced to main (<sha>)` の `<sha>` と一致していれば ArgoCD は正常で、
+「同期すべき変更が無い」だけ（PR のマージ漏れなど）。
 
 ### 手動 helm（初期構築・緊急時）
 

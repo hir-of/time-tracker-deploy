@@ -35,11 +35,25 @@ spec:
     server: https://7ffc7a95.kubo-test.hexabase.io:6443
     namespace: time-tracker
 
+  # **手動同期**。`automated` は意図的に設定していない。
+  #
+  # 自動同期にすると、デプロイ用リポジトリの main が動いた瞬間に本番へ反映される。
+  # 検証環境でデモに使う都合上、**反映のタイミングを人が決められる**ほうが都合がよい
+  # (説明の途中で Pod が入れ替わらない)。
+  #
+  # 反映するとき:
+  #   argocd app sync argocd/time-tracker
+  #
+  # **自動同期にする場合は下記を戻す**。あわせて運用が変わる点に注意:
+  #   - `selfHeal: true` にすると `kubectl scale` や `kubectl edit` による手当てが
+  #     約 1 秒で巻き戻る。緊急時も Git 経由でしか変更できなくなる
+  #   - `prune: true` は Git から消えたリソースをクラスタからも削除する
+  #
+  #   automated:
+  #     prune: true
+  #     selfHeal: true
+  #     allowEmpty: false
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-      allowEmpty: false
     syncOptions:
       - ServerSideApply=true
 
