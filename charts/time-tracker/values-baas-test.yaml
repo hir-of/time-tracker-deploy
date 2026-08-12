@@ -7,9 +7,9 @@
 global:
   namespace: time-tracker
 backend:
-  tag: "sha-7d9db38"
+  tag: "sha-b37f73f"
 frontend:
-  tag: "sha-7d9db38"
+  tag: "sha-b37f73f"
 ingress:
   # Traefik の既定証明書(*.kubo.hexabase.io)に乗るホスト名にすること。
   # 別ドメインにすると証明書が一致せず TLS が成立しない。
